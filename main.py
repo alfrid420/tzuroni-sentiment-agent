@@ -10,6 +10,8 @@ What it writes (all inside this project folder):
     data/news_scored.csv       scored news (LIVE mode; empty in SAMPLE mode)
     data/daily_features.csv    daily features + n+1 target, all tickers
     data/predictions.csv       n+1 predictions + support/resistance + test numbers
+    data/model_comparison.csv  Ridge vs RandomForest vs GradientBoosting,
+                               test numbers per ticker (all three, honestly)
     report/report.html         the visual report (open it in a browser)
     report/mentions_sentiment.png
     report/price_prediction.png
@@ -39,8 +41,8 @@ def main():
     run_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     print(f"== HengSeng Sentiment Price Prediction Agent — run {run_date} ==")
 
-    # 1. get real prices first
-    print("[1/5] Fetching real prices (Yahoo Finance)...")
+    # 1. get real prices first (1 year now, not 90 days)
+    print("[1/5] Fetching real prices, 1 year (Yahoo Finance)...")
     prices = collectors.fetch_prices(TICKERS, days=PRICE_HISTORY_DAYS)
     price_rows = []
     for t in TICKERS:
@@ -61,9 +63,11 @@ def main():
     pd.DataFrame(scored_posts).to_csv(DATA / "posts_scored.csv", index=False)
     pd.DataFrame(scored_news).to_csv(DATA / "news_scored.csv", index=False)
 
-    # 3. features + model + tomorrow's prediction, one ticker at a time
-    print("[3/5] Building features, training Ridge, testing on the last 30%...")
+    # 3. features + model comparison + tomorrow's prediction, one ticker at a time
+    print("[3/5] Building features (sentiment + technicals), comparing "
+          "Ridge vs RandomForest vs GradientBoosting on the last 30%...")
     rows, predictions, metrics_by_ticker = [], [], {}
+    comparison_rows, comparison_by_ticker = [], {}
     feature_frames = []
     for t in TICKERS:
         t_posts = [p for p in scored_posts if p["ticker"] == t["ticker"]]
@@ -71,8 +75,24 @@ def main():
         df = model_mod.build_daily_features(prices[t["yahoo"]], t_posts, t_news)
         df["ticker"] = t["ticker"]
         feature_frames.append(df)
-        model, metrics, _test = model_mod.train_and_evaluate(df)
-        pred_return, pred_price = model_mod.predict_next_day(model, df)
+        results, best_name, best_params = model_mod.compare_models(df)
+        comparison_by_ticker[t["ticker"]] = results
+        for model_name, m in results.items():
+            comparison_rows.append({
+                "ticker": t["ticker"], "model": model_name,
+                "train_days": m["train_days"], "test_days": m["test_days"],
+                "val_directional_accuracy": m["val_directional_accuracy"],
+                "directional_accuracy": m["directional_accuracy"],
+                "mae": m["mae"], "rmse": m["rmse"],
+                "baseline_directional_accuracy":
+                    m["baseline_directional_accuracy"],
+                "params": m["params"], "is_best": model_name == best_name,
+            })
+        metrics = results[best_name]
+        metrics_by_ticker[t["ticker"]] = {**metrics, "best_model": best_name}
+        # n+1 prediction: winning model refit on all days up to today
+        final_model = model_mod.train_final_model(df, best_name, best_params)
+        pred_return, pred_price = model_mod.predict_next_day(final_model, df)
         sr = model_mod.support_resistance(df, window=SUPPORT_RESISTANCE_WINDOW)
         mentions = int(df["mention_count"].tail(SENTIMENT_WINDOW_DAYS).sum())
         sent_mean = float(df["sentiment_mean"].tail(SENTIMENT_WINDOW_DAYS).mean())
@@ -91,18 +111,31 @@ def main():
         }
         rows.append(row)
         predictions.append(row)
-        metrics_by_ticker[t["ticker"]] = metrics
         print(f"      {t['ticker']:>7} {t['name']:<22} {direction:<8} "
               f"now {sr['current_price']:>10.2f} -> n+1 {pred_price:>10.2f} "
-              f"({row['predicted_change_pct']:+.2f}%)  test dir-acc "
-              f"{metrics['directional_accuracy']:.0%}  MAE {metrics['mae']:.4f}")
+              f"({row['predicted_change_pct']:+.2f}%)  best={best_name} "
+              f"test dir-acc {metrics['directional_accuracy']:.0%} "
+              f"(Ridge {results['Ridge']['directional_accuracy']:.0%} / "
+              f"RF {results['RandomForest']['directional_accuracy']:.0%} / "
+              f"GB {results['GradientBoosting']['directional_accuracy']:.0%})")
 
     pd.concat(feature_frames).to_csv(DATA / "daily_features.csv", index=False)
+    pd.DataFrame(comparison_rows).to_csv(DATA / "model_comparison.csv", index=False)
     pred_df = pd.DataFrame([{
         **{k: v for k, v in r.items() if k != "yahoo"},
+        "best_model": metrics_by_ticker[r["ticker"]]["best_model"],
         "mae": metrics_by_ticker[r["ticker"]]["mae"],
         "rmse": metrics_by_ticker[r["ticker"]]["rmse"],
-        "directional_accuracy": metrics_by_ticker[r["ticker"]]["directional_accuracy"],
+        "directional_accuracy":
+            metrics_by_ticker[r["ticker"]]["directional_accuracy"],
+        "ridge_dir_acc":
+            comparison_by_ticker[r["ticker"]]["Ridge"]["directional_accuracy"],
+        "rf_dir_acc":
+            comparison_by_ticker[r["ticker"]]["RandomForest"]["directional_accuracy"],
+        "gb_dir_acc":
+            comparison_by_ticker[r["ticker"]]["GradientBoosting"]["directional_accuracy"],
+        "baseline_dir_acc":
+            comparison_by_ticker[r["ticker"]]["Ridge"]["baseline_directional_accuracy"],
         "data_mode": mode,
     } for r in predictions])
     pred_df.to_csv(DATA / "predictions.csv", index=False)
@@ -112,13 +145,14 @@ def main():
     report_mod.chart_mentions_sentiment(rows, REPORT / "mentions_sentiment.png")
     report_mod.chart_price_prediction(prices, predictions, REPORT / "price_prediction.png")
     report_mod.build_html(rows, predictions, metrics_by_ticker, mode, run_date,
-                          REPORT / "report.html")
+                          REPORT / "report.html", comparison_by_ticker)
 
     # 5. print a short summary
     print("[5/5] Done.")
     print(f"      mode: {mode} (set APIFY_TOKEN + EXA_API_KEY in .env for LIVE)")
     print(f"      report: {REPORT / 'report.html'}")
     print(f"      predictions: {DATA / 'predictions.csv'}")
+    print(f"      model comparison: {DATA / 'model_comparison.csv'}")
     if mode == "SAMPLE":
         print("      NOTE: sentiment is SAMPLE — add free tokens to .env "
               "and re-run for live scraped posts/news.")

@@ -43,66 +43,85 @@ TICKERS = [
 ]
 
 # Sentiment sources per exchange (from the assignment doc — min. 2 each).
-# I collect them with Apify's website-content-crawler (see below).
-# Note: there is no official Apify actor called "apify/telegram-scraper"
-# — I checked, the page does not exist — so I dropped Telegram as a
-# source instead of using a made-up actor ID. The sources below are the
-# ones the crawler actually visits.
+# Both give me real individual posts with their own timestamps now:
+#  1. Stocktwits public API (free, no key) — per-message stream per
+#     US ADR symbol. I checked each symbol's title on 10 Nov 2026, so
+#     I know the stream is really about the company.
+#  2. X (Twitter) search via the Apify actor apisamurai/x-twitter-scraper
+#     (pay-per-tweet, $0.25 per 1,000; about $0.08 for a full run).
+# What I dropped, and why:
+#  * Apify website-content-crawler on LIHKG / Naver / Daum / Yahoo
+#    discussion pages — a page crawl returns page text, not individual
+#    dated posts, so likes/reposts/views/followers were all 0 and the
+#    posts never lined up with price days. That was the gap.
+#  * Telegram — there is no official Apify actor called
+#    "apify/telegram-scraper", I checked, so I did not use a made-up ID.
+#  * Reddit — its public JSON endpoints answer 403 without a login now,
+#    so I could not get posts from there for free.
+#  * Naver / Daum / LIHKG boards — no free per-post actor or API I could
+#    verify; the page crawls came back nearly empty anyway.
 SOURCES = {
     "Hong Kong": [
-        {"name": "LIHKG", "kind": "forum",
-         "note": "HK retail-trader forum, stock search page"},
         {"name": "Stocktwits", "kind": "social",
-         "note": "Stock discussion stream per ticker"},
-        {"name": "Yahoo Finance Community", "kind": "forum",
-         "note": "Yahoo conversation page per ticker"},
+         "note": "Per-message stream for the US ADR symbol (public API)"},
+        {"name": "X (Twitter)", "kind": "social",
+         "note": "Keyword search via Apify actor apisamurai/x-twitter-scraper"},
     ],
     "South Korea": [
-        {"name": "Naver Finance Boards", "kind": "forum",
-         "note": "KRX stock discussion rooms (jongmok-toronsil)"},
-        {"name": "Daum Finance Forums", "kind": "forum",
-         "note": "Korean financial portal discussion page per ticker"},
-        {"name": "Yahoo Finance Community", "kind": "forum",
-         "note": "Yahoo conversation page per ticker"},
+        {"name": "Stocktwits", "kind": "social",
+         "note": "Per-message stream for the US ADR symbol (public API) — only Samsung and Hyundai have one"},
+        {"name": "X (Twitter)", "kind": "social",
+         "note": "Keyword search via Apify actor apisamurai/x-twitter-scraper"},
     ],
 }
 
 # Apify actors used in LIVE mode (free-tier actors; IDs are public, not secrets).
-# Only one actor now: apify/website-content-crawler (checked — it exists,
-# Apify's own actor, 4.6 stars, 170k+ users). The token itself comes from
-# the APIFY_TOKEN environment variable only.
+# Only one actor now: apisamurai/x-twitter-scraper (checked — it exists,
+# public, 1,387 runs, $0.25 per 1,000 tweets). The token itself comes
+# from the APIFY_TOKEN environment variable only.
 APIFY_ACTORS = {
-    "web": "apify/website-content-crawler",  # forum / discussion pages
+    "x": "apisamurai/x-twitter-scraper",  # X search, per-tweet rows
 }
 
+# Stocktwits symbol per ticker (US ADR). I verified each one by reading
+# the stream's own "symbol.title" on 10 Nov 2026 — bare numbers like
+# "005930" are a trap: Stocktwits reads them as other instruments
+# ("005930" is the IWM ETF, "000660" is Treasury futures), so I only
+# use a symbol when its title names the company. None means Stocktwits
+# has no stream for that company at all.
+STOCKTWITS_SYMBOLS = {
+    "0700": "TCEHY",    # Tencent Holdings Ltd. - ADR
+    "9988": "BABA",     # Alibaba
+    "3690": "MPNGY",    # Meituan Unsponsored ADR (real, but quiet: newest post 8 Sep 2026)
+    "9618": "JD",       # JD.com
+    "1810": "XIACY",    # Xiaomi
+    "005930": "SSNLF",  # Samsung Electronics
+    "000660": None,     # SK Hynix — no Stocktwits symbol exists
+    "035420": None,     # Naver — no Stocktwits symbol exists
+    "005380": "HYMTF",  # Hyundai Motor Company GDR
+    "051910": None,     # LG Chem — no Stocktwits symbol exists
+}
 
-def discussion_urls(t):
-    """Discussion pages to crawl for one ticker. Gives back a list of
-    (source name, url). 3 pages per ticker, 2+ sources per exchange."""
-    from urllib.parse import quote_plus
-
-    if t["exchange"] == "Hong Kong":
-        return [
-            ("LIHKG",
-             f"https://lihkg.com/search?q={quote_plus(t['name'])}"),
-            ("Stocktwits",
-             f"https://stocktwits.com/symbol/{t['ticker']}.HK"),
-            ("Yahoo Finance Community",
-             f"https://finance.yahoo.com/quote/{t['ticker']}.HK/community"),
-        ]
-    return [
-        ("Naver Finance Boards",
-         f"https://finance.naver.com/item/board.naver?code={t['ticker']}"),
-        ("Daum Finance Forums",
-         f"https://finance.daum.net/quotes/A{t['ticker']}/discussion"),
-        ("Yahoo Finance Community",
-         f"https://finance.yahoo.com/quote/{t['ticker']}.KS/community"),
-    ]
+# X search term per ticker (plain company name + "stock" where it helps
+# cut noise; lang:en and -filter:replies are added by the collector).
+X_SEARCH_TERMS = {
+    "0700": "Tencent stock",
+    "9988": "Alibaba stock",
+    "3690": "Meituan",
+    "9618": "JD.com stock",
+    "1810": "Xiaomi stock",
+    "005930": "Samsung Electronics stock",
+    "000660": "SK Hynix",
+    "035420": "Naver stock",
+    "005380": "Hyundai Motor stock",
+    "051910": "LG Chem stock",
+}
 
 # Exa search: news only, recent, per ticker.
 EXA_NEWS_PER_TICKER = 5
 
 # Pipeline windows
-PRICE_HISTORY_DAYS = 90      # price bars fetched (enough for train/test + S/R)
+PRICE_HISTORY_DAYS = 365     # price bars fetched (~250 trading days: more
+                             # training days than the old 90-day window)
 SENTIMENT_WINDOW_DAYS = 10   # social posts window required by the task
 SUPPORT_RESISTANCE_WINDOW = 20  # rolling window for S/R levels

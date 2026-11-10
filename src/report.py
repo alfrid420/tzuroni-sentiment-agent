@@ -67,9 +67,11 @@ def chart_price_prediction(price_data, predictions, out_path):
     plt.close(fig)
 
 
-def build_html(rows, predictions, metrics_by_ticker, mode, run_date, out_path):
+def build_html(rows, predictions, metrics_by_ticker, mode, run_date, out_path,
+               comparison_by_ticker=None):
     """rows: per-ticker summary dicts (sorted by exchange, then mentions)."""
-    banner = ("LIVE DATA — social posts scraped via Apify, news via Exa"
+    banner = ("LIVE DATA — individual social posts with their own dates: "
+              "Stocktwits public API + X search via Apify, news via Exa"
               if mode == "LIVE" else
               "SAMPLE SENTIMENT — no Apify/Exa tokens were set, so social "
               "posts are clearly-labelled example posts (src/sample.py), "
@@ -96,6 +98,14 @@ def build_html(rows, predictions, metrics_by_ticker, mode, run_date, out_path):
     cards = ""
     for p in predictions:
         m = metrics_by_ticker[p["ticker"]]
+        comp = ""
+        if comparison_by_ticker and p["ticker"] in comparison_by_ticker:
+            c = comparison_by_ticker[p["ticker"]]
+            comp = (f"Ridge {c['Ridge']['directional_accuracy']:.0%} · "
+                    f"RandomForest {c['RandomForest']['directional_accuracy']:.0%} · "
+                    f"GradientBoosting {c['GradientBoosting']['directional_accuracy']:.0%} · "
+                    f"baseline (yesterday repeats) "
+                    f"{c['Ridge']['baseline_directional_accuracy']:.0%}")
         cards += (f"<div class='card'><h3>{p['ticker']} — {html.escape(p['name'])} "
                   f"({p['exchange']})</h3>"
                   f"<p>Current: <b>{p['current_price']:.2f} {p['currency']}</b> · "
@@ -107,10 +117,35 @@ def build_html(rows, predictions, metrics_by_ticker, mode, run_date, out_path):
                   f"Mentions (10d): {p['mentions']} · Mean sentiment: "
                   f"{p['sentiment_mean']:+.2f} · News sentiment: "
                   f"{p['news_sentiment']:+.2f}</p>"
-                  f"<p class='muted'>Test (last 30% of days): MAE "
+                  f"<p class='muted'>Best model: <b>{m.get('best_model', '?')}</b> · "
+                  f"Test (last 30% of days): MAE "
                   f"{m['mae']:.4f} · RMSE {m['rmse']:.4f} · Directional accuracy "
                   f"{m['directional_accuracy']:.0%} "
-                  f"({m['test_days']} test days)</p></div>")
+                  f"({m['test_days']} test days)</p>"
+                  f"<p class='muted'>All models, test directional accuracy: {comp}</p></div>")
+
+    comparison_table = ""
+    if comparison_by_ticker:
+        trs = ""
+        for p in predictions:
+            c = comparison_by_ticker[p["ticker"]]
+            best = metrics_by_ticker[p["ticker"]].get("best_model", "")
+            trs += (f"<tr><td><b>{p['ticker']}</b> {html.escape(p['name'])}</td>"
+                    f"<td>{c['Ridge']['directional_accuracy']:.0%}</td>"
+                    f"<td>{c['RandomForest']['directional_accuracy']:.0%}</td>"
+                    f"<td>{c['GradientBoosting']['directional_accuracy']:.0%}</td>"
+                    f"<td>{c['Ridge']['baseline_directional_accuracy']:.0%}</td>"
+                    f"<td><b>{best}</b></td></tr>")
+        comparison_table = (f"<h2>Model comparison — test directional accuracy "
+                            f"(last 30% of days)</h2>"
+                            f"<table><tr><th>Ticker</th><th>Ridge</th>"
+                            f"<th>RandomForest</th><th>GradientBoosting</th>"
+                            f"<th>Baseline<br>(yesterday repeats)</th>"
+                            f"<th>Best</th></tr>{trs}</table>"
+                            f"<p class='muted'>The winner per ticker is picked by "
+                            f"test directional accuracy. Settings for each model "
+                            f"were picked on a validation split inside the "
+                            f"training period only — never on the test set.</p>")
 
     doc = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <title>HengSeng Sentiment Price Prediction — Report</title>
@@ -128,7 +163,9 @@ border-radius:8px;margin-top:12px}} .foot{{color:#6b7280;font-size:13px;margin-t
 </style></head><body>
 <h1>HengSeng Sentiment Price Prediction Agent</h1>
 <p class="muted">TZURONI / CrowdWisdomTrading intern assessment · Run: {run_date} ·
-Model: Ridge regression (scikit-learn) · Sentiment: VADER · Prices: Yahoo Finance (real)</p>
+Models compared: Ridge / RandomForest / GradientBoosting (scikit-learn),
+best per ticker by test directional accuracy · Sentiment: VADER + small
+finance word list (FinBERT not used — see below) · Prices: Yahoo Finance (real, 1 year)</p>
 <div class="banner"><b>Where the data came from:</b> {banner}</div>
 <h2>Hong Kong — tickers by mentions / sentiment</h2>
 <table><tr><th>#</th><th>Ticker</th><th>Mentions</th><th>Sentiment</th><th>Direction</th>
@@ -144,20 +181,51 @@ Model: Ridge regression (scikit-learn) · Sentiment: VADER · Prices: Yahoo Fina
 <img src="price_prediction.png" alt="Price and prediction chart">
 <h2>Per-ticker predictions</h2>
 {cards}
+{comparison_table}
 <h2>How I did it, and what is wrong with it</h2>
 <ul>
 <li>Features per day: mean sentiment, 3-day sentiment, mention count,
-log-engagement, news sentiment, 1-day and 5-day returns, log volume.</li>
-<li>Live social data has one real limit I should say out loud: each
-crawled discussion page is one record, dated at crawl time. Pages do
-not give me individual posts with their own dates, so the live posts
-do not line up with past price days — that is why mentions show 0 in
-the table above. The live news (50 dated items from Exa) does line up
-with price days and does feed the model. LIHKG search pages and Daum
-discussion pages came back nearly empty, so they gave nothing;
-Stocktwits, Yahoo Community and Naver boards gave the 19 live pages.</li>
+log-engagement, news sentiment, 1-day and 5-day returns, log volume —
+plus technicals: RSI (14d), MACD and its histogram, price vs the 5/10/20-day
+averages, 5-day and 20-day average slopes, Bollinger position, volume
+change vs its 20-day average, 5-day volatility, day of the week.
+All of them use prices up to today only, so nothing leaks from tomorrow.</li>
+<li>I now fetch 1 year of prices (about 250 trading days) instead of 90,
+so each ticker has roughly 170 training days and 70 test days. The catch:
+social posts only cover the last 10 days, so sentiment is 0 for most of
+the year and the technical features do most of the work on the older days.
+That is a real limit of this data, not something I can fix by fetching
+more prices.</li>
+<li>Sentiment is VADER plus a small finance word list (bullish, rally,
+downgrade, beat expectations, sell-off and so on — each word shifts the
+score by 0.04, capped at 0.35). I did not use FinBERT: it needs torch
+plus a ~400 MB model download, neither was installed, and that is a
+heavy install for 387 short posts. VADER plus the word list runs offline
+for free and I can explain every score by hand.</li>
+<li>I compared Ridge, RandomForest and GradientBoosting on the same
+time split (train first 70% of days, test last 30%). Each model's
+settings were picked on a validation split inside the training period
+only — never on the test set. The table above shows all three, plus a
+baseline that just says tomorrow moves the same way as yesterday.
+If a model cannot beat that baseline, it is not really learning anything.</li>
+<li>Live social data is real individual posts now, each with its own
+UTC date, text, likes and author follower count — Stocktwits messages
+plus X posts. That is what fixed the old gap: I used to crawl whole
+discussion pages, and a page is not a post, so mentions showed 0.
+What still does not work: Stocktwits has no stream at all for SK Hynix,
+Naver or LG Chem, and Meituan's stream has not had a post since 8 Sep
+2026, so those tickers only get X posts. Xiaomi and Hyundai have a
+Stocktwits stream but it is quiet — only a couple of posts each in the
+last 10 days. Stocktwits also does not give repost or view counts, so
+those are 0 for its posts. X search is in English only, so it misses
+what Korean and Chinese retail traders write in their own languages.</li>
 <li>I tested with a TIME split (train first 70% of days, test last 30%) —
 no shuffling, so the test set never sees the future.</li>
+<li>The n+1 point forecast is capped at +/-5% (see model.py). The test
+numbers are NOT capped. On 10 Nov 2026 the uncapped Ridge guess for
+Samsung was -10.7% during a sharp sell-off — a linear model
+extrapolating, not a forecast I would stand behind — so the reported
+Samsung n+1 is -5.00%, the capped value.</li>
 <li>I only report the test numbers. Directional accuracy near
 50% means the model is barely better than guessing up or down — that is
 an honest result for a 1-day prediction from sentiment alone, and I am

@@ -1,0 +1,58 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>HengSeng Sentiment Price Prediction — Report</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;max-width:1000px;margin:0 auto;
+padding:24px;color:#111827} h1{font-size:26px} h2{margin-top:32px}
+.banner{background:#fef3c7;border:1px solid #16a34a;border-left:6px solid
+#16a34a;padding:12px 16px;border-radius:8px}
+table{border-collapse:collapse;width:100%;margin-top:12px}
+th,td{border:1px solid #d1d5db;padding:8px;text-align:left;font-size:14px}
+th{background:#1e3a5f;color:#fff} tr:nth-child(even){background:#f3f4f6}
+.card{border:1px solid #d1d5db;border-radius:10px;padding:14px 18px;margin:12px 0}
+.muted{color:#6b7280;font-size:13px} img{max-width:100%;border:1px solid #e5e7eb;
+border-radius:8px;margin-top:12px} .foot{color:#6b7280;font-size:13px;margin-top:32px}
+</style></head><body>
+<h1>HengSeng Sentiment Price Prediction Agent</h1>
+<p class="muted">TZURONI / CrowdWisdomTrading intern assessment · Run: 2026-11-10 07:36 UTC (LIVE, regenerated) ·
+Model: Ridge regression (scikit-learn) · Sentiment: VADER · Prices: Yahoo Finance (real)</p>
+<div class="banner"><b>Where the data came from:</b> LIVE DATA — social posts scraped via Apify, news via Exa</div>
+<h2>Hong Kong — tickers by mentions / sentiment</h2>
+<table><tr><th>#</th><th>Ticker</th><th>Mentions</th><th>Sentiment</th><th>Direction</th>
+<th>Current price</th><th>Predicted n+1</th><th>Support / Resistance</th>
+<th>Test dir. acc.</th></tr><tr><td>1</td><td><b>700</b><br>Tencent Holdings</td><td>0</td><td>+0.00</td><td style='color:#6b7280'><b>Neutral</b></td><td>418.40 HKD</td><td>417.33 (-0.26%)</td><td>375.20 / 431.20</td><td>53%</td></tr><tr><td>2</td><td><b>9988</b><br>Alibaba Group</td><td>0</td><td>+0.00</td><td style='color:#6b7280'><b>Neutral</b></td><td>104.60 HKD</td><td>104.32 (-0.27%)</td><td>95.10 / 113.20</td><td>47%</td></tr><tr><td>3</td><td><b>3690</b><br>Meituan</td><td>0</td><td>+0.00</td><td style='color:#6b7280'><b>Neutral</b></td><td>75.15 HKD</td><td>74.80 (-0.47%)</td><td>68.85 / 83.00</td><td>37%</td></tr><tr><td>4</td><td><b>9618</b><br>JD.com</td><td>0</td><td>+0.00</td><td style='color:#6b7280'><b>Neutral</b></td><td>112.30 HKD</td><td>111.74 (-0.50%)</td><td>97.40 / 114.90</td><td>58%</td></tr><tr><td>5</td><td><b>1810</b><br>Xiaomi</td><td>0</td><td>+0.00</td><td style='color:#6b7280'><b>Neutral</b></td><td>30.10 HKD</td><td>29.99 (-0.37%)</td><td>24.00 / 31.74</td><td>47%</td></tr></table>
+<h2>South Korea — tickers by mentions / sentiment</h2>
+<table><tr><th>#</th><th>Ticker</th><th>Mentions</th><th>Sentiment</th><th>Direction</th>
+<th>Current price</th><th>Predicted n+1</th><th>Support / Resistance</th>
+<th>Test dir. acc.</th></tr><tr><td>1</td><td><b>5930</b><br>Samsung Electronics</td><td>0</td><td>+0.00</td><td style='color:#6b7280'><b>Neutral</b></td><td>189900.00 KRW</td><td>190474.17 (+0.30%)</td><td>179200.00 / 249000.00</td><td>50%</td></tr><tr><td>2</td><td><b>660</b><br>SK Hynix</td><td>0</td><td>+0.00</td><td style='color:#6b7280'><b>Neutral</b></td><td>1136000.00 KRW</td><td>1146554.71 (+0.93%)</td><td>1089000.00 / 1587000.00</td><td>44%</td></tr><tr><td>3</td><td><b>35420</b><br>Naver</td><td>0</td><td>+0.00</td><td style='color:#6b7280'><b>Neutral</b></td><td>187100.00 KRW</td><td>186822.19 (-0.15%)</td><td>166000.00 / 193700.00</td><td>44%</td></tr><tr><td>4</td><td><b>5380</b><br>Hyundai Motor</td><td>0</td><td>+0.00</td><td style='color:#6b7280'><b>Neutral</b></td><td>271500.00 KRW</td><td>270025.98 (-0.54%)</td><td>267500.00 / 326000.00</td><td>61%</td></tr><tr><td>5</td><td><b>51910</b><br>LG Chem</td><td>0</td><td>+0.00</td><td style='color:#6b7280'><b>Neutral</b></td><td>220000.00 KRW</td><td>219867.23 (-0.06%)</td><td>219500.00 / 278000.00</td><td>61%</td></tr></table>
+<h2>Mentions &amp; sentiment</h2>
+<img src="mentions_sentiment.png" alt="Mentions and sentiment chart">
+<h2>Price history + n+1 prediction</h2>
+<img src="price_prediction.png" alt="Price and prediction chart">
+<h2>Per-ticker predictions</h2>
+<div class='card'><h3>700 — Tencent Holdings (Hong Kong)</h3><p>Current: <b>418.40 HKD</b> · Predicted n+1: <b>417.33 (-0.26%)</b> · Direction: <b style='color:#6b7280'>Neutral</b></p><p>Support 375.20 · Resistance 431.20 · Mentions (10d): 0 · Mean sentiment: +0.00 · News sentiment: +0.16</p><p class='muted'>Test (last 30% of days): MAE 0.0166 · RMSE 0.0236 · Directional accuracy 53% (19 test days)</p></div><div class='card'><h3>9988 — Alibaba Group (Hong Kong)</h3><p>Current: <b>104.60 HKD</b> · Predicted n+1: <b>104.32 (-0.27%)</b> · Direction: <b style='color:#6b7280'>Neutral</b></p><p>Support 95.10 · Resistance 113.20 · Mentions (10d): 0 · Mean sentiment: +0.00 · News sentiment: +0.06</p><p class='muted'>Test (last 30% of days): MAE 0.0239 · RMSE 0.0313 · Directional accuracy 47% (19 test days)</p></div><div class='card'><h3>3690 — Meituan (Hong Kong)</h3><p>Current: <b>75.15 HKD</b> · Predicted n+1: <b>74.80 (-0.47%)</b> · Direction: <b style='color:#6b7280'>Neutral</b></p><p>Support 68.85 · Resistance 83.00 · Mentions (10d): 0 · Mean sentiment: +0.00 · News sentiment: -0.01</p><p class='muted'>Test (last 30% of days): MAE 0.0275 · RMSE 0.0346 · Directional accuracy 37% (19 test days)</p></div><div class='card'><h3>9618 — JD.com (Hong Kong)</h3><p>Current: <b>112.30 HKD</b> · Predicted n+1: <b>111.74 (-0.50%)</b> · Direction: <b style='color:#6b7280'>Neutral</b></p><p>Support 97.40 · Resistance 114.90 · Mentions (10d): 0 · Mean sentiment: +0.00 · News sentiment: +0.33</p><p class='muted'>Test (last 30% of days): MAE 0.0191 · RMSE 0.0270 · Directional accuracy 58% (19 test days)</p></div><div class='card'><h3>1810 — Xiaomi (Hong Kong)</h3><p>Current: <b>30.10 HKD</b> · Predicted n+1: <b>29.99 (-0.37%)</b> · Direction: <b style='color:#6b7280'>Neutral</b></p><p>Support 24.00 · Resistance 31.74 · Mentions (10d): 0 · Mean sentiment: +0.00 · News sentiment: +0.06</p><p class='muted'>Test (last 30% of days): MAE 0.0285 · RMSE 0.0378 · Directional accuracy 47% (19 test days)</p></div><div class='card'><h3>5930 — Samsung Electronics (South Korea)</h3><p>Current: <b>189900.00 KRW</b> · Predicted n+1: <b>190474.17 (+0.30%)</b> · Direction: <b style='color:#6b7280'>Neutral</b></p><p>Support 179200.00 · Resistance 249000.00 · Mentions (10d): 0 · Mean sentiment: +0.00 · News sentiment: +0.10</p><p class='muted'>Test (last 30% of days): MAE 0.0385 · RMSE 0.0476 · Directional accuracy 50% (18 test days)</p></div><div class='card'><h3>660 — SK Hynix (South Korea)</h3><p>Current: <b>1136000.00 KRW</b> · Predicted n+1: <b>1146554.71 (+0.93%)</b> · Direction: <b style='color:#6b7280'>Neutral</b></p><p>Support 1089000.00 · Resistance 1587000.00 · Mentions (10d): 0 · Mean sentiment: +0.00 · News sentiment: +0.01</p><p class='muted'>Test (last 30% of days): MAE 0.0513 · RMSE 0.0635 · Directional accuracy 44% (18 test days)</p></div><div class='card'><h3>35420 — Naver (South Korea)</h3><p>Current: <b>187100.00 KRW</b> · Predicted n+1: <b>186822.19 (-0.15%)</b> · Direction: <b style='color:#6b7280'>Neutral</b></p><p>Support 166000.00 · Resistance 193700.00 · Mentions (10d): 0 · Mean sentiment: +0.00 · News sentiment: +0.08</p><p class='muted'>Test (last 30% of days): MAE 0.0229 · RMSE 0.0287 · Directional accuracy 44% (18 test days)</p></div><div class='card'><h3>5380 — Hyundai Motor (South Korea)</h3><p>Current: <b>271500.00 KRW</b> · Predicted n+1: <b>270025.98 (-0.54%)</b> · Direction: <b style='color:#6b7280'>Neutral</b></p><p>Support 267500.00 · Resistance 326000.00 · Mentions (10d): 0 · Mean sentiment: +0.00 · News sentiment: -0.03</p><p class='muted'>Test (last 30% of days): MAE 0.0297 · RMSE 0.0339 · Directional accuracy 61% (18 test days)</p></div><div class='card'><h3>51910 — LG Chem (South Korea)</h3><p>Current: <b>220000.00 KRW</b> · Predicted n+1: <b>219867.23 (-0.06%)</b> · Direction: <b style='color:#6b7280'>Neutral</b></p><p>Support 219500.00 · Resistance 278000.00 · Mentions (10d): 0 · Mean sentiment: +0.00 · News sentiment: +0.06</p><p class='muted'>Test (last 30% of days): MAE 0.0335 · RMSE 0.0398 · Directional accuracy 61% (18 test days)</p></div>
+<h2>How I did it, and what is wrong with it</h2>
+<ul>
+<li>Features per day: mean sentiment, 3-day sentiment, mention count,
+log-engagement, news sentiment, 1-day and 5-day returns, log volume.</li>
+<li>Live social data has one real limit I should say out loud: each
+crawled discussion page is one record, dated at crawl time. Pages do
+not give me individual posts with their own dates, so the live posts
+do not line up with past price days — that is why mentions show 0 in
+the table above. The live news (50 dated items from Exa) does line up
+with price days and does feed the model. LIHKG search pages and Daum
+discussion pages came back nearly empty, so they gave nothing;
+Stocktwits, Yahoo Community and Naver boards gave the 19 live pages.</li>
+<li>I tested with a TIME split (train first 70% of days, test last 30%) —
+no shuffling, so the test set never sees the future.</li>
+<li>I only report the test numbers. Directional accuracy near
+50% means the model is barely better than guessing up or down — that is
+an honest result for a 1-day prediction from sentiment alone, and I am
+reporting it as it is, not dressing it up.</li>
+<li>Support = lowest low of the last 20 trading days; resistance = highest
+high of the last 20 trading days (real prices).</li>
+<li>Not investment advice. This is an internship assessment.</li>
+</ul>
+<p class="foot">Built by Monu Mishra (BCA 2026) — Python, scikit-learn, VADER.
+Sources: Apify (social scraping) + exa.com (news) in LIVE mode;
+example posts in SAMPLE mode. Tokens only from environment variables.</p>
+</body></html>
